@@ -11,12 +11,28 @@ class UserCreate(BaseModel):
     password: str
 
 
+class UserUpdate(BaseModel):
+    email: EmailStr | None = None
+    password: str | None = None
+
+
 class UserResponse(BaseModel):
     id: int
     email: str
     created_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class AuthResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserResponse
 
 
 # ----- Plan -----

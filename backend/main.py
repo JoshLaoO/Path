@@ -7,12 +7,15 @@ from fastapi.security.oauth2 import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from auth import create_access_token, decode_access_token, hash_password, verify_password
+from bible_api import fetch_verse
 from database import Base, engine, get_db
 from migrate import run_migrations
 from models import Plan as PlanModel, PlanDay as PlanDayModel, User as UserModel
 from schemas import (
-    AuthResponse,
+    AgentChatRequest,
+    AgentChatResponse,
     GeneratePlanRequest,
+    AuthResponse,
     LoginRequest,
     PlanCreate,
     PlanResponse,
@@ -23,6 +26,7 @@ from schemas import (
     UserUpdate,
 )
 from plan_generator import generate_plan, generate_plan_days
+from agent import run_agent
 
 # For Swagger UI "Authorize": use OAuth2 password flow; tokenUrl is the sign-in endpoint.
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token", auto_error=False)
@@ -158,6 +162,20 @@ def get_me(current_user: UserModel = Depends(get_current_user)):
     return current_user
 
 
+@app.get("/users/me/plans", response_model=list[PlanResponse])
+def list_my_plans(
+    current_user: UserModel = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """List plans belonging to the current user."""
+    return (
+        db.query(PlanModel)
+        .filter(PlanModel.user_id == current_user.id)
+        .order_by(PlanModel.created_at.desc())
+        .all()
+    )
+
+
 # ----- Users -----
 
 
@@ -252,6 +270,16 @@ def get_plan(plan_id: int, db: Session = Depends(get_db)):
     return plan
 
 
+@app.get("/plans/{plan_id}/with-days", response_model=PlanWithDaysResponse)
+def get_plan_with_days(plan_id: int, db: Session = Depends(get_db)):
+    """Get a plan including its plan days (verses)."""
+    plan = db.query(PlanModel).filter(PlanModel.id == plan_id).first()
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plan not found")
+    _ = plan.plan_days  # trigger load
+    return plan
+
+
 @app.patch("/plans/{plan_id}", response_model=PlanResponse)
 def update_plan(plan_id: int, plan_update: PlanUpdate, db: Session = Depends(get_db)):
     plan = db.query(PlanModel).filter(PlanModel.id == plan_id).first()
@@ -307,13 +335,68 @@ def generate_plan_with_days(
         plan_id=db_plan.id,
         theme=body.theme,
         duration_days=body.duration_days,
+        translation=body.translation,
     ):
         db_day = PlanDayModel(
             plan_id=day_schema.plan_id,
             day_number=day_schema.day_number,
             verse=day_schema.verse,
+            passage_reference=day_schema.passage_reference,
+            key_verse=day_schema.key_verse,
         )
         db.add(db_day)
     db.commit()
     db.refresh(db_plan)
     return db_plan
+
+
+@app.post("/plans/generate-with-agent", response_model=AgentChatResponse)
+def generate_plan_with_agent(
+    body: AgentChatRequest,
+    current_user: UserModel = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Chat with the agent to create a plan. Send conversation messages; the agent
+    either asks a follow-up or returns a plan spec and the backend creates the plan.
+    """
+    if body.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="user_id does not match authenticated user")
+
+    messages = [{"role": m.role, "content": m.content} for m in body.messages]
+    result = run_agent(messages, theme_hint=body.theme_hint)
+
+    if result["action"] == "ask":
+        return AgentChatResponse(message=result["message"], plan_id=None, plan=None)
+
+    spec = result["plan_spec"]
+    title = spec.theme.strip() or "Bible reading plan"
+    db_plan = PlanModel(
+        user_id=current_user.id,
+        title=title,
+        description=f"{spec.duration_days}-day plan on {spec.theme}",
+    )
+    db.add(db_plan)
+    db.commit()
+    db.refresh(db_plan)
+
+    key_verses = spec.key_verses if spec.key_verses and len(spec.key_verses) == len(spec.references) else None
+    for i, ref in enumerate(spec.references):
+        day_num = i + 1
+        verse_text = fetch_verse(ref, translation=body.translation)
+        key_verse = key_verses[i] if key_verses else None
+        db_day = PlanDayModel(
+            plan_id=db_plan.id,
+            day_number=day_num,
+            verse=verse_text,
+            passage_reference=ref,
+            key_verse=key_verse,
+        )
+        db.add(db_day)
+    db.commit()
+    db.refresh(db_plan)
+    return AgentChatResponse(
+        message=result["message"],
+        plan_id=db_plan.id,
+        plan=PlanWithDaysResponse.model_validate(db_plan),
+    )

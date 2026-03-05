@@ -40,6 +40,20 @@ def run_migrations() -> None:
             conn.execute(text("ALTER TABLE plan_days ADD COLUMN verse TEXT"))
             conn.commit()
 
+        if _table_exists(conn, "plan_days") and not _column_exists(
+            conn, "plan_days", "passage_reference"
+        ):
+            conn.execute(
+                text("ALTER TABLE plan_days ADD COLUMN passage_reference TEXT")
+            )
+            conn.commit()
+
+        if _table_exists(conn, "plan_days") and not _column_exists(
+            conn, "plan_days", "key_verse"
+        ):
+            conn.execute(text("ALTER TABLE plan_days ADD COLUMN key_verse TEXT"))
+            conn.commit()
+
         # Ensure user 1 exists so plans.user_id=1 is valid
         if _table_exists(conn, "users"):
             result = conn.execute(text("SELECT 1 FROM users WHERE id = 1"))

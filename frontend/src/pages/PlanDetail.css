@@ -1,0 +1,80 @@
+.plan-detail {
+  padding: 0.5rem 0;
+}
+
+.plan-detail-back {
+  display: inline-block;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.plan-detail-back:hover {
+  color: var(--accent);
+}
+
+.plan-detail-header {
+  margin-bottom: 1.5rem;
+}
+
+.plan-detail-title {
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+  margin: 0 0 0.35rem 0;
+}
+
+.plan-detail-desc {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.plan-detail-loading,
+.plan-detail-error {
+  color: var(--text-muted);
+}
+
+.plan-detail-error {
+  color: var(--error);
+}
+
+.plan-day-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  counter-reset: day;
+}
+
+.plan-day {
+  counter-increment: day;
+  padding: 1.25rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.plan-day:last-child {
+  border-bottom: none;
+}
+
+.plan-day-num {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.plan-day-verse {
+  color: var(--text);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.plan-day-verse p {
+  margin: 0 0 0.5rem 0;
+}
+
+.plan-day-verse p:last-child {
+  margin-bottom: 0;
+}

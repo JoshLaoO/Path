@@ -46,7 +46,11 @@ SQLite (initially)
 
 Frontend
 
-React + Vite
+React + Vite (in `frontend/`)
+
+**Run the frontend (dev):** From project root, `cd frontend && npm install && npm run dev`. Open http://localhost:5173. The dev server proxies API requests to the backend (default http://localhost:8000).
+
+**Run with Docker:** From project root, `docker compose up --build`. Backend at http://localhost:8000, frontend at http://localhost:3000. The frontend container serves the built app with nginx and proxies `/api` to the backend.
 
 AI Integration
 

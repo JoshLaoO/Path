@@ -7,6 +7,8 @@ services:
       - "8000:8000"
     environment:
       - DATABASE_URL=sqlite:////data/app.db
+    env_file:
+      - .env
     volumes:
       - backend_data:/data
     healthcheck:
@@ -15,6 +17,15 @@ services:
       timeout: 5s
       retries: 3
       start_period: 5s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
 
 volumes:
   backend_data:

@@ -40,7 +40,9 @@ class PlanDay(Base):
     id = Column(Integer, primary_key=True, index=True)
     plan_id = Column(Integer, ForeignKey("plans.id"), nullable=False, index=True)
     day_number = Column(Integer, nullable=False)
-    verse = Column(Text, nullable=True)
+    verse = Column(Text, nullable=True)  # fetched passage text from bible-api.com
+    passage_reference = Column(Text, nullable=True)  # e.g. "Romans 8:1-17" (agent or theme)
+    key_verse = Column(Text, nullable=True)  # highlight verse for the day (reference or text)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 

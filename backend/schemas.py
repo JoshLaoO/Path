@@ -65,6 +65,34 @@ class GeneratePlanRequest(BaseModel):
     theme: str
     duration_days: int
     user_id: int
+    translation: str = "web"  # bible-api.com id: web, kjv, asv, etc.
+
+
+class AgentPlanSpec(BaseModel):
+    """Structured plan spec produced by the agent; one entry per day."""
+
+    theme: str
+    duration_days: int
+    references: list[str]  # Bible refs per day, e.g. ["John 3:16", "Romans 8:1-17"]
+    key_verses: list[str] | None = None  # optional one per day, same length as references
+
+
+class AgentChatMessage(BaseModel):
+    role: str  # "user" | "assistant"
+    content: str
+
+
+class AgentChatRequest(BaseModel):
+    user_id: int
+    messages: list[AgentChatMessage]
+    theme_hint: str | None = None
+    translation: str = "web"
+
+
+class AgentChatResponse(BaseModel):
+    message: str
+    plan_id: int | None = None
+    plan: "PlanWithDaysResponse | None" = None
 
 
 class PlanWithDaysResponse(PlanResponse):
@@ -80,11 +108,15 @@ class PlanDayCreate(BaseModel):
     plan_id: int
     day_number: int
     verse: str | None = None
+    passage_reference: str | None = None
+    key_verse: str | None = None
 
 
 class PlanDayUpdate(BaseModel):
     day_number: int | None = None
     verse: str | None = None
+    passage_reference: str | None = None
+    key_verse: str | None = None
 
 
 class PlanDayResponse(BaseModel):
@@ -92,6 +124,8 @@ class PlanDayResponse(BaseModel):
     plan_id: int
     day_number: int
     verse: str | None = None
+    passage_reference: str | None = None
+    key_verse: str | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
 
@@ -144,5 +178,6 @@ class JournalEntryResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-# Resolve forward ref for PlanWithDaysResponse
+# Resolve forward refs
 PlanWithDaysResponse.model_rebuild()
+AgentChatResponse.model_rebuild()
